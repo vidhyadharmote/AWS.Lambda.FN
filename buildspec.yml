@@ -1,0 +1,24 @@
+# AWS buildspec reference: https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+# dotnet command reference: https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-publish?tabs=netcore21
+# NOTE: If you change -- configuration to "Release", you have to upate the IdentifyBackbone/CodeUri path in serverless.template
+# NOTE: The only way to know the codepipeline s3 bucket is to create the codepipeline, and then find the bucket. Your first codepipeline
+# run will fail, and then you have to update the bucket and key-id here.
+
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - dotnet restore
+      - dotnet publish --configuration Release
+  post_build:
+    commands:
+      - aws cloudformation package --template-file AWS.Lambda.FN/serverless.template --kms-key-id a057204e-5abc-4c90-b776-c7a706ffe98c --s3-bucket codepipeline-us-west-2-484824444333 
+                                   --output-template-file outputServerless.template
+artifacts:
+  type: zip
+  files:
+    - AWS.Lambda.FN/serverless.template
+    - AWS.Lambda.FN/templateConfig.json
+    - outputServerless.template
+  discard-paths: yes 

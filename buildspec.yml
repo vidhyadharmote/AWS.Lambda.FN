@@ -13,7 +13,7 @@ phases:
       - dotnet publish --configuration Release
   post_build:
     commands:
-      - aws cloudformation package --template-file AWS.Lambda.FN/serverless.template --kms-key-id a057204e-5abc-4c90-b776-c7a706ffe98c --s3-bucket codepipeline-us-west-2-484824444333 
+      - aws cloudformation package --template-file AWS.Lambda.FN/serverless.template --kms-key-id 1b40376e-c414-4ff9-bcdc-c962e7efc168 --s3-bucket codepipeline-us-west-2-484824444333
                                    --output-template-file outputServerless.template
 artifacts:
   type: zip

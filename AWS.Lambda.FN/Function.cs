@@ -44,7 +44,6 @@ namespace AWS.Lambda.FN
             serviceCollection.AddAWSService<IAmazonSQS>();
             Services = serviceCollection.BuildServiceProvider();
             SQSClient = Services.GetService<IAmazonSQS>();
-
         }
         public async Task TestStudent(SQSEvent evnt, ILambdaContext context)
         {

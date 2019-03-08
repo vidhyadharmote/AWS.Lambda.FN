@@ -1,0 +1,198 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Transform" : "AWS::Serverless-2016-10-31",
+  "Description" : "AWS Serverless Application for Get Html ",
+  "Metadata": {
+		"AWSResourceTypes": { "Description": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html" },
+		"ServerlessSAM": { "Description": "https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md" },
+		"FnRef": { "Description": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference.html" },
+		"PseudoParmRef": { "Description": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html" }
+	},
+  "Parameters" : {
+		"ShouldCreateS3Notifications" : {
+			"Type" : "String",
+			"AllowedValues" : ["true", "false"],
+			"Description": "Always false on stack creation to avoid circular dependencies; true once related queue has been created"
+		}
+	},
+  "Conditions" : {
+		"CreateS3Notifications" : {"Fn::Equals" : [{"Ref" : "ShouldCreateS3Notifications"}, "true"]}
+	},
+
+  "Resources" : {
+		"ExecIAMRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [{
+						"Effect": "Allow",
+						"Principal": {
+							"Service": "lambda.amazonaws.com"
+						},
+						"Action": "sts:AssumeRole"
+					}]
+				},
+				"ManagedPolicyArns": [ "arn:aws:iam::aws:policy/AWSLambdaFullAccess", "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole", "arn:aws:iam::aws:policy/AmazonSQSFullAccess" ]
+			}
+		},
+		
+		
+		"GetHtmlQueuePolicy":{
+			"Type" : "AWS::SQS::QueuePolicy",
+			"Properties" : {
+				"PolicyDocument" : {
+					"Version": "2012-10-17",
+					"Statement": [
+					{
+						"Sid": "example-statement-ID",
+						"Effect": "Allow",
+						"Principal": {
+							"AWS": "*"
+						},
+						"Action": "SQS:SendMessage",
+						"Resource": { "Fn::GetAtt" : ["GetHtmlQueue", "Arn"]}
+					}]
+				},
+				"Queues" : [ { "Ref" : "GetHtmlQueue" } ]
+			}
+		},
+		"GetHtmlQueue": {
+			"Type": "AWS::SQS::Queue",
+			"Properties": {
+				"QueueName" : "awsgethtmlqueue",
+				"VisibilityTimeout": 900
+			}
+		},
+		"GetHtml" : {
+		"Type" : "AWS::Serverless::Function",
+		"Properties": {
+				"FunctionName": "aws-gethtmlqueue-fn",
+				"Handler": "AWS.Lambda.FN::AWS.Lambda.FN.Functions::GetHtml",
+				"Runtime": "dotnetcore2.1",
+				"CodeUri": "bin/Release/netcoreapp2.1/publish",
+				"Description": "Get Html from url",
+				"MemorySize": 1024,
+				"Timeout": 900,
+				"Role": { "Fn::GetAtt" : ["ExecIAMRole", "Arn"]},
+				"Policies": [ "AWSLambdaFullAccess" ],
+				"Environment" : {
+					"Variables" : {
+						"ThirdPartyDomain" : "https://www.cars.com/",
+						"NumberOfRetry":3,
+						"RequestLoggingEnabled": "true"
+					}
+				},
+				"Events": {
+					"GetURL": {
+						"Type": "SQS",
+						"Properties": {
+							"Queue": { "Fn::GetAtt" : ["GetHtmlQueue", "Arn"]},
+							"BatchSize": 1
+						}
+					}
+				}
+			}
+		},
+
+		"TestStudentQueuePolicy":{
+			"Type" : "AWS::SQS::QueuePolicy",
+			"Properties" : {
+				"PolicyDocument" : {
+					"Version": "2012-10-17",
+					"Statement": [
+					{
+						"Sid": "example-statement-ID",
+						"Effect": "Allow",
+						"Principal": {
+							"AWS": "*"
+						},
+						"Action": "SQS:SendMessage",
+						"Resource": { "Fn::GetAtt" : ["TestStudentQueue", "Arn"]}
+					}]
+				},
+				"Queues" : [ { "Ref" : "TestStudentQueue" } ]
+			}
+		},
+		"TestStudentQueue": {
+			"Type": "AWS::SQS::Queue",
+			"Properties": {
+				"QueueName" : "test-student-queue",
+				"VisibilityTimeout": 720
+			}
+		},
+		"TestStudent" : {
+			"Type" : "AWS::Serverless::Function",
+			"Properties": {
+				"FunctionName": "test-student-fn",
+				"Handler": "AWS.Lambda.FN::AWS.Lambda.FN.Functions::TestStudent",
+				"Runtime": "dotnetcore2.1",
+				"CodeUri": "bin/Release/netcoreapp2.1/publish",
+				"Description": "Executes Third-party DealerId Identification",
+				"MemorySize": 1024,
+				"Timeout": 120,
+				"Role": { "Fn::GetAtt" : ["ExecIAMRole", "Arn"]},
+				"Policies": [ "AWSLambdaFullAccess" ],
+				"Events": {
+					"ScanRequestCreated": {
+						"Type": "SQS",
+						"Properties": {
+							"Queue": { "Fn::GetAtt" : ["TestStudentQueue", "Arn"]},
+							"BatchSize": 3
+						}
+					}
+				}
+			}
+		},
+		"TestNewStudentPolicy":{
+			"Type" : "AWS::SQS::QueuePolicy",
+			"Properties" : {
+				"PolicyDocument" : {
+					"Version": "2012-10-17",
+					"Statement": [
+					{
+						"Sid": "example-statement-ID",
+						"Effect": "Allow",
+						"Principal": {
+							"AWS": "*"
+						},
+						"Action": "SQS:SendMessage",
+						"Resource": { "Fn::GetAtt" : ["TestNewStudentQueue", "Arn"]}
+					}]
+				},
+				"Queues" : [ { "Ref" : "TestNewStudentQueue" } ]
+			}
+		},
+		"TestNewStudentQueue": {
+			"Type": "AWS::SQS::Queue",
+			"Properties": {
+				"QueueName" : "test-student-second-queue",
+				"VisibilityTimeout": 720
+			}
+		},
+		"TestStudentTwo" : {
+			"Type" : "AWS::Serverless::Function",
+			"Properties": {
+				"FunctionName": "test-student-second-fn",
+				"Handler": "AWS.Lambda.FN::AWS.Lambda.FN.Functions::TestStudentTwo",
+				"Runtime": "dotnetcore2.1",
+				"CodeUri": "bin/Release/netcoreapp2.1/publish",
+				"Description": "Executes Third-party DealerId Identification",
+				"MemorySize": 1024,
+				"Timeout": 120,
+				"Role": { "Fn::GetAtt" : ["ExecIAMRole", "Arn"]},
+				"Policies": [ "AWSLambdaFullAccess" ],
+				"Events": {
+					"ScanRequestCreated": {
+						"Type": "SQS",
+						"Properties": {
+							"Queue": { "Fn::GetAtt" : ["TestNewStudentQueue", "Arn"]},
+							"BatchSize": 3
+						}
+					}
+				}
+			}
+		}
+		
+	}
+}

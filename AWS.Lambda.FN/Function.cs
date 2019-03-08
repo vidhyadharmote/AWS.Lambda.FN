@@ -35,7 +35,7 @@ namespace AWS.Lambda.FN
         /// </summary>
         public Functions()
         {
-            // GetHtml();
+            // GetHtml(); configuration
             var serviceCollection = new ServiceCollection();
             var configuration = new ConfigurationBuilder().Build();
             var awsOptions = configuration.GetAWSOptions();
